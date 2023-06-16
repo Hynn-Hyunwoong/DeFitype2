@@ -4,8 +4,8 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 
-const toEther = (amount: any, unit = 'ether') => ethers.utils.parseUnits(amount.toString(), unit)
-const fromEther = (amount: any, unit = 'ether') => ethers.utils.formatUnits(amount.toString(), unit)
+const toEther = (amount: number, unit = 'ether') => ethers.utils.parseUnits(amount.toString(), unit)
+const fromEther = (amount: number, unit = 'ether') => ethers.utils.formatUnits(amount.toString(), unit)
 
 describe("Test MyToken",  ()=> {
   const initTest = async () => {
@@ -26,7 +26,7 @@ describe("Test MyToken",  ()=> {
   });
 
   describe("Mint", async () => {
-    it.only("Only Minter can mint", async () => {
+    it("Only Minter can mint", async () => {
       const {myToken, user, owner} = await loadFixture(initTest);
       expect(myToken.connect(user).mint(user.address, toEther(1))).to.be.reverted
     })
