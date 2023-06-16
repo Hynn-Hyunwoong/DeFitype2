@@ -22,6 +22,13 @@ const config: HardhatUserConfig = {
         mnemonic:  "test test test test test test test test test test test junk",
         accountsBalance: "100000000000000000000000" // 1,000,000 ETH
       }
+    },
+    baobab : {
+      url : "https://api.baobab.klaytn.net:8651",
+      chainId : 1001,
+      accounts: require("./privatekey.json").privatekey,
+      gas : 20000000,
+      gasPrice : 25000000000
     }
   }
 };
