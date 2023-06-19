@@ -16,6 +16,7 @@ contract Trader {
     // tokens
     address constant WKLAY = 0x043c471bEe060e00A56CcD02c0Ca286808a5A436;
     address constant WHLE = 0x15308179057A1d5e56C61a612b1EADfA5F669Aad;
+    address constant FISH = 0xf7dF58081149F0F34b4E9EA64DE83E347f04d060;
     
     constructor() {}
 
@@ -24,18 +25,21 @@ contract Trader {
     // ------------- VIEW ------------- 
 
     function pendingReward(uint pid) external view returns (uint) {
-        // TODO
-        return 0;
+        return IMasterChef(CHEF).pendingwhale(pid, address(this));
     }
 
     function pendingRewardAll() external view returns (uint) {
-        // TODO
-        return 0;
+        uint poolLength = IMasterChef(CHEF).poolLength();
+        uint reward;
+        for (uint pid = 1; pid < poolLength; pid++) {
+            reward += IMasterChef(CHEF).pendingwhale(pid, address(this));
+        }
+        return reward;
     }
 
     function depositBalance(uint pid) external view returns (uint) {
-        // TODO
-        return 0;
+        IMasterChef.UserInfo memory userInfo = IMasterChef(CHEF).userInfo(pid, address(this));
+        return userInfo.amount;
     }
 
     // ------------- LIQUIDITY ------------- 
@@ -187,7 +191,6 @@ contract Trader {
 
         // estimate KLAY amount
         uint[] memory amountsIn = IUniswapV2Router01(ROUTER).getAmountsIn(amountOut, path); // uint[] memory amountsIn
-        uint amountIn = amountsIn[0];
         //swap
         IUniswapV2Router01(ROUTER).swapETHForExactTokens{value:amountsIn[0]}(
             amountOut, // uint amountOut,
@@ -228,20 +231,50 @@ contract Trader {
 
     // ------------- FARM ------------- 
 
+// Only LP
     function deposit(uint pid, uint amount) external {
-        // TODO
-    }
+        // pid -> lpToken address
+        IMasterChef.PoolInfo memory poolInfo = IMasterChef(CHEF).poolInfo(pid);
+        require(address(poolInfo.lpToken) != address(0), "Trader: invalid pid");
+        
+        // Option 1
+        // address lpToken = address(poolInfo.lpToken)
+        // Options 2
+        // IERC20(lpToken)
 
+        poolInfo.lpToken.transferFrom(msg.sender, address(this), amount);
+        approveToken(address(poolInfo.lpToken), CHEF);
+        IMasterChef(CHEF).deposit(pid, amount);
+    }
+// Only LP
     function withdraw(uint pid, uint amount) external {
-        // TODO
+        // pid -> lpToken address
+        IMasterChef.PoolInfo memory poolInfo = IMasterChef(CHEF).poolInfo(pid);
+        require(address(poolInfo.lpToken) != address(0), "Trader: invalid pid");
+
+        IMasterChef(CHEF).withdraw(pid, amount);
+        // rewardToken == GovernanceToken
+        poolInfo.lpToken.transfer(msg.sender, amount);
     }
 
     function harvest() public {
-        // TODO
+        // Trder -> chef request to reward
+        // rewardToken : chef -> Trader
+        // Checking PoolInfo(Rotate), rewardToken transfer to Trader contract 
+        // define pid = pid is rotate all Pool
+        uint poolLength = IMasterChef(CHEF).poolLength();
+        for(uint pid = 1; pid < poolLength; pid++){
+            IMasterChef(CHEF).deposit(pid, 0);
+        }
     }
 
     function claimReward() external {
-        // TODO
+        // rwardToken : trader -> User
+        // Import to rewardtoken from Trader
+        uint reward = IERC20(WHLE).balanceOf(address(this));
+        if(reward > 0){
+            IERC20(WHLE).transfer(msg.sender, reward);
+        }
     }
 
     // ------------- UTILS ------------- 
