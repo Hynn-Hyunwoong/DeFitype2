@@ -124,19 +124,105 @@ contract Trader {
     // ------------- SWAP ------------- 
 
     function swapExactTokenToToken(uint amountIn, address[] calldata path) external {
-        // TODO
+        address inputToken = path[0];
+        // transferFromInput
+        IERC20(inputToken).transferFrom(msg.sender, address(this), amountIn);
+
+        //approve inputToken
+        approveToken(inputToken, ROUTER);
+        //swap 
+        IUniswapV2Router01(ROUTER).swapExactTokensForTokens(
+            amountIn, // uint amountIn,
+            0, // uint amountOutMin,
+            path, // address[] calldata path,
+            msg.sender, // address to,
+            block.timestamp + 10 // uint deadline
+        );
     }
 
     function swapTokenToExactToken(uint amountOut, uint amountInMax, address[] calldata path) external {
-        // TODO
+        // estimate amountIn
+        uint[] memory amountsIn = IUniswapV2Router01(ROUTER).getAmountsIn(amountOut, path); // uint[] memory amountsIn
+        uint amountIn = amountsIn[0];
+        
+        //validate check
+        require(amountIn <= amountInMax, "Trader: amountInMax is not enough");
+        
+        // transferFrom inputToken
+        address inputToken = path[0];
+        IERC20(inputToken).transferFrom(msg.sender, address(this), amountIn);
+
+        //approve
+        approveToken(inputToken, ROUTER);
+
+        //swap
+        IUniswapV2Router01(ROUTER).swapTokensForExactTokens(
+            amountOut, // uint amountOut,
+            amountInMax, // uint amountInMax,
+            path, // address[] calldata path,
+            msg.sender, // address to,
+            block.timestamp + 10 // uint deadline
+        );
+
     }
 
     function swapExactKlayToToken(address[] calldata path) payable external {
-        // TODO
+        // checking validate
+        require(path[0] == WKLAY, "Trader: path[0] is not WKLAY");
+        require(msg.value >0, "Trader: msg.value is not enough");
+
+        //swap
+        IUniswapV2Router01(ROUTER).swapExactETHForTokens{value:msg.value}(
+            0, // uint amountOutMin,
+            path, // address[] calldata path,
+            msg.sender, // address to,
+            block.timestamp + 10 // uint deadline
+        );
     }
 
     function swapKlayToExactToken(uint amountOut, address[] calldata path) payable external {
-        // TODO
+        // check path
+        require(path[0] == WKLAY, "Trader: path[0] is not WKLAY");
+        require(msg.value >0, "Trader: msg.value is not enough");
+
+        // estimate KLAY amount
+        uint[] memory amountsIn = IUniswapV2Router01(ROUTER).getAmountsIn(amountOut, path); // uint[] memory amountsIn
+        uint amountIn = amountsIn[0];
+        //swap
+        IUniswapV2Router01(ROUTER).swapETHForExactTokens{value:amountsIn[0]}(
+            amountOut, // uint amountOut,
+            path, // address[] calldata path,
+            msg.sender, // address to,
+            block.timestamp + 10 // uint deadline
+        );
+
+        // msg.value - amountsIn[0] -> refund
+        if (msg.value > amountsIn[0]){
+            (bool success, ) = (msg.sender).call{value: msg.value - amountsIn[0]}(new bytes(0));
+            require(success, "Trader: refund failed");
+        } 
+    }
+
+    // TOKEN -> KLAY
+    function swapExactTokenToKlay(uint amountIn, address[] calldata path) external {
+        // check path
+        require(path[path.length-1] == WKLAY, "Trader: path[last] is not WKLAY");
+
+        // transferFrom
+        address inputToken = path[0];
+        IERC20(inputToken).transferFrom(msg.sender, address(this), amountIn);
+
+        // approve
+        approveToken(inputToken, ROUTER);
+
+        // swap
+        IUniswapV2Router01(ROUTER).swapExactTokensForETH(
+            amountIn, // uint amountIn,
+            0, // uint amountOutMin,
+            path, // address[] calldata path,
+            msg.sender, // address to,
+            block.timestamp + 10 // uint deadline
+        );
     }
 
 
